@@ -114,9 +114,39 @@ export function TransactionsPage() {
   return (
     <div className="grid" style={{ gap: 12 }}>
       <div className="card">
-        <div style={{ fontSize: 18, fontWeight: 800 }}>Transactions</div>
-        <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-          Add your revenue and your costs (ingredients, etc.). Everything here powers the dashboard.
+        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <div>
+            <p className="sectionTitle">Transactions</p>
+            <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+              Add costs (ingredients, etc.) and revenue. The dashboard updates automatically.
+            </div>
+          </div>
+          <div className="row" style={{ gap: 14 }}>
+            <div>
+              <div className="muted" style={{ fontSize: 12 }}>
+                Revenue
+              </div>
+              <div style={{ fontWeight: 800, color: 'var(--good)' }}>
+                {formatMoneyFromCents(totals.revenue)}
+              </div>
+            </div>
+            <div>
+              <div className="muted" style={{ fontSize: 12 }}>
+                Expenses
+              </div>
+              <div style={{ fontWeight: 800, color: 'var(--bad)' }}>
+                {formatMoneyFromCents(totals.expense)}
+              </div>
+            </div>
+            <div>
+              <div className="muted" style={{ fontSize: 12 }}>
+                {profitIsLoss ? 'Loss' : 'Profit'}
+              </div>
+              <div style={{ fontWeight: 800, color: totals.profit >= 0 ? 'var(--good)' : 'var(--bad)' }}>
+                {formatMoneyFromCents(Math.abs(totals.profit))}
+              </div>
+            </div>
+          </div>
         </div>
         {error ? (
           <div style={{ marginTop: 10, color: 'var(--bad)', fontSize: 13 }}>{error}</div>
@@ -124,39 +154,9 @@ export function TransactionsPage() {
       </div>
 
       <div className="card">
-        <div className="cardTitle">Quick totals (current list)</div>
-        <div className="row" style={{ gap: 14 }}>
-          <div>
-            <div className="muted" style={{ fontSize: 12 }}>
-              Revenue
-            </div>
-            <div style={{ fontWeight: 800, color: 'var(--good)' }}>
-              {formatMoneyFromCents(totals.revenue)}
-            </div>
-          </div>
-          <div>
-            <div className="muted" style={{ fontSize: 12 }}>
-              Expenses
-            </div>
-            <div style={{ fontWeight: 800, color: 'var(--bad)' }}>
-              {formatMoneyFromCents(totals.expense)}
-            </div>
-          </div>
-          <div>
-            <div className="muted" style={{ fontSize: 12 }}>
-              {profitIsLoss ? 'Loss' : 'Profit'}
-            </div>
-            <div style={{ fontWeight: 800, color: totals.profit >= 0 ? 'var(--good)' : 'var(--bad)' }}>
-              {formatMoneyFromCents(Math.abs(totals.profit))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="cardTitle">Add a transaction</div>
-        <form onSubmit={onCreate} className="row" style={{ alignItems: 'flex-end' }}>
-          <div className="control">
+        <div className="cardTitle">Add</div>
+        <form onSubmit={onCreate} className="formGrid">
+          <div className="control col-3">
             <label>Date</label>
             <input
               type="date"
@@ -164,7 +164,7 @@ export function TransactionsPage() {
               onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
             />
           </div>
-          <div className="control">
+          <div className="control col-3">
             <label>Type</label>
             <select
               value={form.type}
@@ -174,7 +174,7 @@ export function TransactionsPage() {
               <option value="revenue">revenue</option>
             </select>
           </div>
-          <div className="control">
+          <div className="control col-3">
             <label>Category</label>
             <input
               list="categories"
@@ -188,44 +188,36 @@ export function TransactionsPage() {
               ))}
             </datalist>
           </div>
-          <div className="control" style={{ minWidth: 260, flex: 1 }}>
-            <label>Description</label>
-            <input
-              placeholder="e.g. Costco run"
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            />
-          </div>
-          <div className="control">
+          <div className="control col-3">
             <label>Amount</label>
             <input
               inputMode="decimal"
-              placeholder="12.50"
+              placeholder="e.g. 500"
               value={form.amount}
               onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
             />
           </div>
-          <button className="btn primary" type="submit" disabled={saving}>
+          <div className="control col-9">
+            <label>Note (optional)</label>
+            <input
+              placeholder="e.g. Costco run / 3 meals"
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            />
+          </div>
+          <button className="btn primary col-3" type="submit" disabled={saving}>
             {saving ? 'Saving…' : 'Add'}
           </button>
         </form>
       </div>
 
       <div className="card">
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 800 }}>Recent transactions</div>
-            <div className="muted" style={{ fontSize: 12, marginTop: 3 }}>
-              Use search to find “ingredients”, “sales”, etc.
-            </div>
-          </div>
+        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <p className="sectionTitle">History</p>
           <div className="controls">
             <div className="control">
               <label>Type</label>
-              <select
-                value={filters.type}
-                onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value }))}
-              >
+              <select value={filters.type} onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value }))}>
                 <option value="">all</option>
                 <option value="expense">expense</option>
                 <option value="revenue">revenue</option>
@@ -245,50 +237,38 @@ export function TransactionsPage() {
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto', marginTop: 10 }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th style={{ textAlign: 'right' }}>Amount</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((t) => (
-                <tr key={t.id}>
-                  <td>{t.date}</td>
-                  <td>
+        <div className="list" style={{ marginTop: 10 }}>
+          {items.map((t) => (
+            <div key={t.id} className="listItem">
+              <div className="muted listDate" style={{ fontSize: 12 }}>
+                {t.date}
+              </div>
+              <div className="listMain">
+                <div className="listTitle">
+                  {t.category}{' '}
+                  <span style={{ marginLeft: 6 }}>
                     <TypePill type={t.type} />
-                  </td>
-                  <td>{t.category}</td>
-                  <td className="muted">{t.description}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 700 }}>
-                    {t.type === 'expense' ? (
-                      <span style={{ color: 'var(--bad)' }}>-{formatMoneyFromCents(t.amount_cents)}</span>
-                    ) : (
-                      <span style={{ color: 'var(--good)' }}>{formatMoneyFromCents(t.amount_cents)}</span>
-                    )}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button className="btn danger" onClick={() => onDelete(t.id)}>
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {!items.length ? (
-                <tr>
-                  <td colSpan={6} className="muted">
-                    No transactions yet. Add your first ingredient cost or sale above.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+                  </span>
+                </div>
+                <div className="listSub">{t.description || '—'}</div>
+              </div>
+              <div className="listAmount" style={{ textAlign: 'right' }}>
+                <div className={t.type === 'expense' ? 'amountNeg' : 'amountPos'}>
+                  {t.type === 'expense' ? '-' : ''}
+                  {formatMoneyFromCents(t.amount_cents)}
+                </div>
+                <button className="btn danger" style={{ marginTop: 8 }} onClick={() => onDelete(t.id)}>
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {!items.length ? (
+            <div className="muted" style={{ fontSize: 13 }}>
+              No transactions yet. Add your first ingredient cost or sale above.
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

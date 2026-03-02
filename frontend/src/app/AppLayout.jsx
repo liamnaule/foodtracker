@@ -15,6 +15,7 @@ export function AppLayout() {
             Dashboard
           </NavLink>
           <NavLink to="/transactions">Transactions</NavLink>
+          <NavLink to="/people">People</NavLink>
         </nav>
       </header>
 

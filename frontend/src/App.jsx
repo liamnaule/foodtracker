@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from './app/AppLayout.jsx'
 import { DashboardPage } from './pages/DashboardPage.jsx'
 import { TransactionsPage } from './pages/TransactionsPage.jsx'
+import { PeoplePage } from './pages/PeoplePage.jsx'
 
 export default function App() {
   return (
@@ -9,6 +10,7 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
+        <Route path="/people" element={<PeoplePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

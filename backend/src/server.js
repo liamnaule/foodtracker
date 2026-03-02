@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import { openDb } from "./db.js";
 import {
+  PersonOrderSchema,
+  PersonSchema,
   TransactionPatchSchema,
   TransactionSchema,
   TransactionType,
@@ -324,6 +326,151 @@ app.get("/api/analysis/profit-trend", (req, res) => {
   });
 
   res.json({ months, series });
+});
+
+app.get("/api/people", (_req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT id, name, created_at
+       FROM people
+       ORDER BY name ASC`
+    )
+    .all();
+  res.json({ items: rows });
+});
+
+app.post("/api/people", (req, res) => {
+  const parsed = PersonSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid payload", details: parsed.error.flatten() });
+  }
+  const info = db
+    .prepare(
+      `INSERT INTO people(name)
+       VALUES (@name)`
+    )
+    .run({ name: parsed.data.name });
+
+  const row = db
+    .prepare(`SELECT id, name, created_at FROM people WHERE id = ?`)
+    .get(info.lastInsertRowid);
+  res.status(201).json(row);
+});
+
+app.post("/api/people/:id/orders", (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "Invalid id" });
+
+  const parsed = PersonOrderSchema.safeParse({ ...req.body, person_id: id });
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid payload", details: parsed.error.flatten() });
+  }
+  const { person_id, date, cost_cents } = parsed.data;
+
+  const person = db.prepare(`SELECT id FROM people WHERE id = ?`).get(person_id);
+  if (!person) return res.status(404).json({ error: "Person not found" });
+
+  const info = db
+    .prepare(
+      `INSERT INTO person_orders(person_id, date, cost_cents)
+       VALUES (@person_id, @date, @cost_cents)`
+    )
+    .run({ person_id, date, cost_cents });
+
+  const row = db
+    .prepare(
+      `SELECT id, person_id, date, cost_cents, created_at
+       FROM person_orders
+       WHERE id = ?`
+    )
+    .get(info.lastInsertRowid);
+  res.status(201).json(row);
+});
+
+app.get("/api/people/:id/orders", (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "Invalid id" });
+
+  const yearRaw = Number(req.query.year);
+  const year = Number.isFinite(yearRaw) ? yearRaw : new Date().getFullYear();
+  const monthRaw = typeof req.query.month === "string" ? req.query.month : null;
+
+  let start = `${year}-01-01`;
+  let end = `${year}-12-31`;
+  if (monthRaw && /^\d{2}$/.test(monthRaw)) {
+    start = `${year}-${monthRaw}-01`;
+    end = `${year}-${monthRaw}-31`;
+  }
+
+  const person = db.prepare(`SELECT id, name FROM people WHERE id = ?`).get(id);
+  if (!person) return res.status(404).json({ error: "Person not found" });
+
+  const items = db
+    .prepare(
+      `SELECT id, person_id, date, cost_cents, created_at
+       FROM person_orders
+       WHERE person_id = @id AND date >= @start AND date <= @end
+       ORDER BY date DESC, id DESC`
+    )
+    .all({ id, start, end });
+
+  const totals = items.reduce(
+    (acc, o) => {
+      acc.total_cents += o.cost_cents;
+      acc.days += 1;
+      return acc;
+    },
+    { total_cents: 0, days: 0 }
+  );
+
+  res.json({ person, year, month: monthRaw, totals, items });
+});
+
+app.get("/api/people/:id/summary/yearly", (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "Invalid id" });
+
+  const person = db.prepare(`SELECT id, name FROM people WHERE id = ?`).get(id);
+  if (!person) return res.status(404).json({ error: "Person not found" });
+
+  const rows = db
+    .prepare(
+      `
+      SELECT substr(date, 1, 4) as year, SUM(cost_cents) as total_cents, COUNT(*) as days
+      FROM person_orders
+      WHERE person_id = @id
+      GROUP BY year
+      ORDER BY year ASC
+    `
+    )
+    .all({ id });
+
+  res.json({ person, items: rows });
+});
+
+app.get("/api/people/:id/summary/monthly", (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "Invalid id" });
+
+  const yearRaw = Number(req.query.year);
+  const year = Number.isFinite(yearRaw) ? yearRaw : new Date().getFullYear();
+
+  const person = db.prepare(`SELECT id, name FROM people WHERE id = ?`).get(id);
+  if (!person) return res.status(404).json({ error: "Person not found" });
+
+  const rows = db
+    .prepare(
+      `
+      SELECT substr(date, 1, 7) as month, SUM(cost_cents) as total_cents, COUNT(*) as days
+      FROM person_orders
+      WHERE person_id = @id AND substr(date, 1, 4) = @year
+      GROUP BY month
+      ORDER BY month ASC
+    `
+    )
+    .all({ id, year: String(year) });
+
+  res.json({ person, year, items: rows });
 });
 
 app.use((err, _req, res, _next) => {
